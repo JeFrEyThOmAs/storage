@@ -83,7 +83,7 @@ export const login = async (req, res, next) => {
   
   const allSessions = await Session.find({userId : user._id}).sort({createdAt : -1})
 
-  if(allSessions.length >= 2){
+  if(allSessions.length >= 2){ 
     await allSessions[0].deleteOne()
   }
 
@@ -116,3 +116,12 @@ export const logout = async(req, res) => {
   res.clearCookie("sid");
   res.status(204).end();
 };
+
+export const logoutAll = async(req, res) => {
+  const { sid } = req.signedCookies
+  const session = await Session.findById(sid)
+  await Session.deleteMany({userId : session.userId})
+  res.clearCookie("sid");
+  res.status(204).end();
+};
+
