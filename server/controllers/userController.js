@@ -4,12 +4,21 @@ import mongoose, { Types } from "mongoose";
 import crypto, { sign } from "node:crypto";
 import bcrypt from "bcrypt"
 import Session from "../models/sessionModel.js";
+import OTP from "../models/otpModel.js";
 
 
 // const secret = process.env.SECRET
 
 export const register = async (req, res, next) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, otp} = req.body;
+
+  const otpRecord = await OTP.findOne({ email, otp });
+
+  if (!otpRecord) {
+    return res.status(400).json({ error: "Invalid or Expired OTP!" });
+  }
+
+  await otpRecord.deleteOne();
 
 
   const session = await mongoose.startSession();
