@@ -11,7 +11,7 @@ import { connectDB } from "./config/db.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-const secret = "HELLOWORLD_!123"
+const secret = process.env.SECRET;
 await connectDB();
 
 const app = express();
