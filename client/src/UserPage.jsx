@@ -7,6 +7,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [userName, setUserName] = useState("Guest User");
   const [userRole, setUserRole] = useState("User");
+  const [userEmail , setUserEmail] = useState("");
   const navigate = useNavigate();
 
 
@@ -89,6 +90,7 @@ export default function UsersPage() {
         // Set user info if logged in
         setUserName(data.name);
         setUserRole(data.role);
+        setUserEmail(data.email);
         // setUserPicture(data.picture);
         // setLoggedIn(true);
       } else if (response.status === 401) {
@@ -141,6 +143,7 @@ export default function UsersPage() {
                     onClick={() => {
                       DeleteUser(user.id);
                     }}
+                    disabled={user.email === userEmail}
                   >
                     Delete
                   </button>
