@@ -240,3 +240,297 @@ Password matches: true
 🧠 One-line exam answer
 
 bcrypt verifies passwords by extracting the salt and cost from the stored hash, re-hashing the entered password with them, and comparing the hashes.
+
+
+
+// RBAC
+
+# RBAC (Role-Based Access Control)
+
+## What is RBAC?
+
+**RBAC (Role-Based Access Control)** is a security model where **permissions are assigned to roles**, and **users are assigned to roles**.
+
+Instead of giving permissions directly to users, we give them to **roles**, and users inherit those permissions through the role.
+
+---
+
+## Basic Idea
+
+```
+User → Role → Permissions
+```
+
+Example:
+
+| User    | Role   | Permissions            |
+| ------- | ------ | ---------------------- |
+| Alice   | Admin  | Create, Delete, Update |
+| Bob     | Editor | Update                 |
+| Charlie | Viewer | Read                   |
+
+---
+
+## Key Components
+
+### 1. User
+
+A person or system that interacts with the application.
+
+Example:
+
+```
+User: Jeffrey
+User ID: 123
+```
+
+---
+
+### 2. Role
+
+A collection of permissions.
+
+Examples of roles:
+
+* Admin
+* Editor
+* Viewer
+* Manager
+
+Example:
+
+```
+Role: Admin
+```
+
+---
+
+### 3. Permission
+
+An action that can be performed.
+
+Examples:
+
+* create_user
+* delete_post
+* read_file
+* update_profile
+
+---
+
+### 4. Resource
+
+The object being accessed.
+
+Examples:
+
+* User
+* File
+* Document
+* API endpoint
+
+Example:
+
+```
+Permission: delete_user
+Resource: user
+```
+
+---
+
+## Example RBAC Structure
+
+```
+Users
+ ├── Alice
+ ├── Bob
+ └── Charlie
+
+Roles
+ ├── Admin
+ ├── Editor
+ └── Viewer
+
+Permissions
+ ├── Create
+ ├── Read
+ ├── Update
+ └── Delete
+```
+
+Mapping:
+
+```
+Admin  → Create, Read, Update, Delete
+Editor → Read, Update
+Viewer → Read
+```
+
+---
+
+## Example Database Design
+
+### Users Table
+
+| id | name  | role_id |
+| -- | ----- | ------- |
+| 1  | Alice | 1       |
+| 2  | Bob   | 2       |
+
+---
+
+### Roles Table
+
+| id | role   |
+| -- | ------ |
+| 1  | Admin  |
+| 2  | Editor |
+| 3  | Viewer |
+
+---
+
+### Permissions Table
+
+| id | permission |
+| -- | ---------- |
+| 1  | create     |
+| 2  | read       |
+| 3  | update     |
+| 4  | delete     |
+
+---
+
+### Role_Permissions Table
+
+| role_id | permission_id |
+| ------- | ------------- |
+| 1       | 1             |
+| 1       | 2             |
+| 1       | 3             |
+| 1       | 4             |
+| 2       | 2             |
+| 2       | 3             |
+
+---
+
+## Example Flow
+
+1. User logs in.
+2. System retrieves the user's **role**.
+3. System checks **permissions assigned to that role**.
+4. Access is granted or denied.
+
+Example:
+
+```
+User: Bob
+Role: Editor
+Action: Delete Post
+```
+
+Check:
+
+```
+Editor → Read, Update
+```
+
+Result:
+
+```
+Access Denied
+```
+
+---
+
+## Example in Backend (Pseudo Code)
+
+```
+if user.role == "admin":
+    allow access
+
+if user.role == "editor" and action == "update":
+    allow access
+else:
+    deny access
+```
+
+---
+
+## Advantages of RBAC
+
+### 1. Easy to manage
+
+Permissions are managed through roles instead of individual users.
+
+### 2. Scalable
+
+Works well for large systems with many users.
+
+### 3. Secure
+
+Reduces mistakes in permission assignments.
+
+### 4. Clean architecture
+
+Centralized permission logic.
+
+---
+
+## Example in Real Systems
+
+| System       | Roles                          |
+| ------------ | ------------------------------ |
+| GitHub       | Owner, Maintainer, Contributor |
+| Google Drive | Editor, Viewer                 |
+| Slack        | Admin, Member                  |
+| AWS IAM      | Admin, Developer               |
+
+---
+
+## RBAC vs Other Models
+
+| Model | Description                       |
+| ----- | --------------------------------- |
+| RBAC  | Access based on roles             |
+| ABAC  | Access based on attributes        |
+| ACL   | Access control lists per resource |
+
+---
+
+## Simple RBAC Example
+
+```
+Admin
+ ├── create_user
+ ├── delete_user
+ └── update_user
+
+Editor
+ ├── update_post
+ └── read_post
+
+Viewer
+ └── read_post
+```
+
+---
+
+## When to Use RBAC
+
+RBAC is useful when:
+
+* There are **many users**
+* Permissions are **similar across groups**
+* You want **simple permission management**
+
+---
+
+## Summary
+
+RBAC works like this:
+
+```
+Users → assigned to → Roles → contain → Permissions
+```
+
+This makes permission management **organized, scalable, and secure**.
