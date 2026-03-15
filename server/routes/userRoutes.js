@@ -1,22 +1,30 @@
 import express from "express";
 import checkAuth from "../middlewares/authMiddleware.js";
 import {
+  getAllUsers,
   getCurrentUser,
   login,
   logout,
   logoutAll,
   register,
 } from "../controllers/userController.js";
+import User from "../models/userModel.js";
 
 const router = express.Router();
 
-router.post("/register", register);
+router.post("/user/register", register);
 
-router.post("/login", login);
+router.post("/user/login", login);
 
-router.get("/", checkAuth, getCurrentUser);
+router.get("/user", checkAuth, getCurrentUser);
 
-router.post("/logout", logout);
-router.post("/logout-all", logoutAll);
+router.get("/users" , checkAuth , (req , res , next) => {
+  if(req.user.role !== "User") return next()
+  res.status(403).json({error : "You cannot access users"})
+  
+} , getAllUsers)
+
+router.post("/user/logout", logout);
+router.post("/user/logout-all", logoutAll);
 
 export default router;

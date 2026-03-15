@@ -8,6 +8,8 @@ import {
   FaSignInAlt,
 } from "react-icons/fa";
 
+export const BASE_URL = "http://localhost:4000";
+
 function DirectoryHeader({
   directoryName,
   onCreateFolderClick,
@@ -17,7 +19,6 @@ function DirectoryHeader({
   disabled = false,
 }) {
   // Use a constant for the API base URL
-  const BASE_URL = "http://localhost:4000";
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -58,7 +59,7 @@ function DirectoryHeader({
       }
     }
     fetchUser();
-  }, [BASE_URL]);
+  }, []);
 
   // -------------------------------------------
   // 2. Toggle user menu
@@ -92,6 +93,7 @@ function DirectoryHeader({
       setShowUserMenu(false);
     }
   };
+
   const handleLogoutAll = async () => {
     try {
       const response = await fetch(`${BASE_URL}/user/logout-all`, {
@@ -170,9 +172,12 @@ function DirectoryHeader({
             className="icon-button"
             title="User Menu"
             onClick={handleUserIconClick}
-            disabled={disabled}
           >
-            {userPicture ? <img className="userPicture" src={userPicture} alt={userName} /> :<FaUser />}
+            {userPicture ? (
+              <img className="userPicture" src={userPicture} alt={userName} />
+            ) : (
+              <FaUser />
+            )}
           </button>
 
           {showUserMenu && (

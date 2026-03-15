@@ -120,6 +120,17 @@ export const getCurrentUser = (req, res) => {
   });
 };
 
+export const getAllUsers = async (req, res) => {
+  const allUsers = await User.find().lean()
+  const allSessions = await Session.find().lean()
+  const allSessionsUserId = allSessions.map(({userId}) => userId.toString())
+  const allSessionsUserIdSet = new Set(allSessionsUserId)
+
+  const transformedUsers = allUsers.map(({_id , name , email}) => (
+    {id : _id , name , email , isLoggedIn : allSessionsUserIdSet.has(_id.toString())}))
+  res.status(200).json(transformedUsers);
+};
+
 export const logout = async(req, res) => {
   const { sid } = req.signedCookies
   const session = await Session.findByIdAndDelete(sid)

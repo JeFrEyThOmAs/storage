@@ -32,6 +32,11 @@ const userSchema = new Schema(
       default:
         "https://static.vecteezy.com/system/resources/previews/002/318/271/non_2x/user-profile-icon-free-vector.jpg",
     },
+    role : {
+      type : String,
+      enum : ["Admin" , "Manager" , "User"],
+      default : "User"
+    }
   },
   {
     strict: "throw",
