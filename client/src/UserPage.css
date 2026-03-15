@@ -37,6 +37,10 @@
     transition: background-color 0.2s;
   }
   
+  .delete-button {
+    background-color: #e82828;
+  }
+  
   .logout-button:disabled {
     background-color: #ccc;
     cursor: not-allowed;

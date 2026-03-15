@@ -116,7 +116,8 @@ export const getCurrentUser = (req, res) => {
   res.status(200).json({
     name: req.user.name,
     email: req.user.email,
-    picture : req.user.picture
+    picture : req.user.picture,
+    role : req.user.role
   });
 };
 
