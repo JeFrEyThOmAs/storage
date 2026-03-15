@@ -6,17 +6,29 @@ import { useNavigate } from "react-router-dom";
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [userName, setUserName] = useState("Guest User");
-  const [userEmail, setUserEmail] = useState("guest@example.com");
   const [userRole, setUserRole] = useState("User");
   const navigate = useNavigate();
 
-  const logoutUser = (userId) => {
-    alert(`Logging out user with ID: ${userId}`);
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.id === userId ? { ...user, isLoggedIn: false } : user
-      )
-    );
+
+  const logoutUser = async (userId) => {
+    const logoutConfirmed = confirm("Are you sure you want to log out?");
+    if (!logoutConfirmed) {
+      return;
+    }
+    try {
+      const response = await fetch(`${BASE_URL}/users/${userId}/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (response.ok) {
+        console.log("Logged out successfully");
+        fetchUsers();
+      } else {
+        console.error("Logout failed");
+      }
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
   };
 
   useEffect(() => {
@@ -55,7 +67,6 @@ export default function UsersPage() {
         const data = await response.json();
         // Set user info if logged in
         setUserName(data.name);
-        setUserEmail(data.email);
         setUserRole(data.role);
         // setUserPicture(data.picture);
         // setLoggedIn(true);

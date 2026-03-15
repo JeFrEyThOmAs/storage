@@ -1,11 +1,12 @@
 import express from "express";
-import checkAuth from "../middlewares/authMiddleware.js";
+import checkAuth, { checkNotRegularUser } from "../middlewares/authMiddleware.js";
 import {
   getAllUsers,
   getCurrentUser,
   login,
   logout,
   logoutAll,
+  logoutById,
   register,
 } from "../controllers/userController.js";
 import User from "../models/userModel.js";
@@ -18,11 +19,9 @@ router.post("/user/login", login);
 
 router.get("/user", checkAuth, getCurrentUser);
 
-router.get("/users" , checkAuth , (req , res , next) => {
-  if(req.user.role !== "User") return next()
-  res.status(403).json({error : "You cannot access users"})
-  
-} , getAllUsers)
+router.get("/users" , checkAuth , checkNotRegularUser , getAllUsers)
+
+router.post('/users/:userId/logout' , checkAuth , checkNotRegularUser , logoutById)
 
 router.post("/user/logout", logout);
 router.post("/user/logout-all", logoutAll);

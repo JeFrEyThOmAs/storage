@@ -139,6 +139,15 @@ export const logout = async(req, res) => {
   res.status(204).end();
 };
 
+export const logoutById = async(req, res) => {
+  try {
+    await Session.deleteMany({userId : req.params.userId})
+    res.status(204).end();
+  }catch(err){
+    next(err)
+  }
+};
+
 export const logoutAll = async(req, res) => {
   const { sid } = req.signedCookies
   const session = await Session.findById(sid)
