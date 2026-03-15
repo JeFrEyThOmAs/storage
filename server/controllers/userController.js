@@ -81,15 +81,27 @@ export const login = async (req, res, next) => {
 
   
   const user = await User.findOne({ email}).lean();
+
   if (!user) {
     return res.status(404).json({ error: "Invalid Credentials" });
   }
+
+  if (user.deleted) {
+    return res.status(403).json({
+      error: "Your account has been deleted. Contact App Admin"
+    });
+  }
+  
   const isPasswordValid = await bcrypt.compare(password, user.password);
   // OR
   // const isPasswordValid = await user.comparePassword(password);
 
   if (!isPasswordValid) {
     return res.status(404).json({ error: "Invalid Credentials" });
+  }
+
+  if(user.deleted){
+    return res.status(403).json({ error: "Your account has been deleted. Contact App Admin" });
   }
   
   const allSessions = await Session.find({userId : user._id}).sort({createdAt : -1})
@@ -124,7 +136,7 @@ export const getCurrentUser = (req, res) => {
 };
 
 export const getAllUsers = async (req, res) => {
-  const allUsers = await User.find().lean()
+  const allUsers = await User.find({deleted : false}).lean()
   const allSessions = await Session.find().lean()
   const allSessionsUserId = allSessions.map(({userId}) => userId.toString())
   const allSessionsUserIdSet = new Set(allSessionsUserId)
@@ -161,10 +173,11 @@ export const logoutAll = async(req, res) => {
 export const deleteUser = async(req, res , next) => {
   const {userId} = req.params
   try {
-    await User.deleteOne({_id : userId})
-    await File.deleteMany({userId})
-    await Directory.deleteMany({userId})
+    // await User.deleteOne({_id : userId})
+    // await File.deleteMany({userId})
+    // await Directory.deleteMany({userId})
     await Session.deleteMany({userId : req.params.userId})
+    await User.findByIdAndUpdate(userId , {deleted : true})
     res.status(204).end();
   }catch(err){
     next(err)
