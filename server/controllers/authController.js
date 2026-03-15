@@ -34,6 +34,10 @@ export const loginWithGoogle = async (req, res, next) => {
   if (user) {
     const allSessions = await Session.find({ userId: user.id });
 
+    if(user.deleted){
+      return res.status(403).json({ error: "Your account has been deleted. Contact App Admin" });
+    }
+
     if (allSessions.length >= 2) {
       await allSessions[0].deleteOne();
     }

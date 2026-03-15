@@ -5,6 +5,9 @@ import crypto, { sign } from "node:crypto";
 import bcrypt from "bcrypt"
 import Session from "../models/sessionModel.js";
 import OTP from "../models/otpModel.js";
+import File from "../models/fileModel.js";
+import { error } from "node:console";
+
 
 
 // const secret = process.env.SECRET
@@ -79,15 +82,27 @@ export const login = async (req, res, next) => {
 
   
   const user = await User.findOne({ email}).lean();
+
   if (!user) {
     return res.status(404).json({ error: "Invalid Credentials" });
   }
+
+  if (user.deleted) {
+    return res.status(403).json({
+      error: "Your account has been deleted. Contact App Admin"
+    });
+  }
+
   const isPasswordValid = await bcrypt.compare(password, user.password);
   // OR
   // const isPasswordValid = await user.comparePassword(password);
 
   if (!isPasswordValid) {
     return res.status(404).json({ error: "Invalid Credentials" });
+  }
+
+  if(user.deleted){
+    return res.status(403).json({ error: "Your account has been deleted. Contact App Admin" });
   }
   
   const allSessions = await Session.find({userId : user._id}).sort({createdAt : -1})
@@ -116,8 +131,20 @@ export const getCurrentUser = (req, res) => {
   res.status(200).json({
     name: req.user.name,
     email: req.user.email,
-    picture : req.user.picture
+    picture : req.user.picture,
+    role : req.user.role
   });
+};
+
+export const getAllUsers = async (req, res) => {
+  const allUsers = await User.find({deleted : false}).lean()
+  const allSessions = await Session.find().lean()
+  const allSessionsUserId = allSessions.map(({userId}) => userId.toString())
+  const allSessionsUserIdSet = new Set(allSessionsUserId)
+
+  const transformedUsers = allUsers.map(({_id , name , email}) => (
+    {id : _id , name , email , isLoggedIn : allSessionsUserIdSet.has(_id.toString())}))
+  res.status(200).json(transformedUsers);
 };
 
 export const logout = async(req, res) => {
@@ -125,6 +152,15 @@ export const logout = async(req, res) => {
   const session = await Session.findByIdAndDelete(sid)
   res.clearCookie("sid");
   res.status(204).end();
+};
+
+export const logoutById = async(req, res) => {
+  try {
+    await Session.deleteMany({userId : req.params.userId})
+    res.status(204).end();
+  }catch(err){
+    next(err)
+  }
 };
 
 export const logoutAll = async(req, res) => {
@@ -135,3 +171,16 @@ export const logoutAll = async(req, res) => {
   res.status(204).end();
 };
 
+export const deleteUser = async(req, res , next) => {
+  const {userId} = req.params
+  if(userId === req.user._id.toString()){
+    return res.status(403).json({error : "Cannot delete yourself"})
+  }
+  try {
+    await Session.deleteMany({userId : req.params.userId})
+    await User.findByIdAndUpdate(userId , {deleted : true})
+    res.status(204).end();
+  }catch(err){
+    next(err)
+  }
+};
