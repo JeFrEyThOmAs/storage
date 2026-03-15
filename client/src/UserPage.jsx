@@ -31,6 +31,27 @@ export default function UsersPage() {
     }
   };
 
+  const DeleteUser = async (userId) => {
+    const logoutConfirmed = confirm("Are you sure you want to log out?");
+    if (!logoutConfirmed) {
+      return;
+    }
+    try {
+      const response = await fetch(`${BASE_URL}/users/${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (response.ok) {
+        console.log("User deleted successfully");
+        fetchUsers();
+      } else {
+        console.error("Logout failed");
+      }
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchUser();
@@ -118,7 +139,7 @@ export default function UsersPage() {
                   <button
                     className="logout-button delete-button"
                     onClick={() => {
-                      console.log(user.id);
+                      DeleteUser(user.id);
                     }}
                   >
                     Delete

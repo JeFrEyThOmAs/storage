@@ -1,6 +1,7 @@
 import express from "express";
-import checkAuth, { checkNotRegularUser } from "../middlewares/authMiddleware.js";
+import checkAuth, { checkIsAdminUser, checkNotRegularUser } from "../middlewares/authMiddleware.js";
 import {
+  deleteUser,
   getAllUsers,
   getCurrentUser,
   login,
@@ -22,6 +23,8 @@ router.get("/user", checkAuth, getCurrentUser);
 router.get("/users" , checkAuth , checkNotRegularUser , getAllUsers)
 
 router.post('/users/:userId/logout' , checkAuth , checkNotRegularUser , logoutById)
+
+router.delete("/users/:userId" , checkAuth , checkIsAdminUser , deleteUser)
 
 router.post("/user/logout", logout);
 router.post("/user/logout-all", logoutAll);

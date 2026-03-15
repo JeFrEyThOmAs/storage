@@ -5,6 +5,8 @@ import crypto, { sign } from "node:crypto";
 import bcrypt from "bcrypt"
 import Session from "../models/sessionModel.js";
 import OTP from "../models/otpModel.js";
+import File from "../models/fileModel.js";
+
 
 
 // const secret = process.env.SECRET
@@ -156,3 +158,15 @@ export const logoutAll = async(req, res) => {
   res.status(204).end();
 };
 
+export const deleteUser = async(req, res , next) => {
+  const {userId} = req.params
+  try {
+    await User.deleteOne({_id : userId})
+    await File.deleteMany({userId})
+    await Directory.deleteMany({userId})
+    await Session.deleteMany({userId : req.params.userId})
+    res.status(204).end();
+  }catch(err){
+    next(err)
+  }
+};

@@ -30,3 +30,8 @@ export const checkNotRegularUser = async (req, res, next) => {
   if (req.user.role !== "User") return next();
   res.status(403).json({ error: "You can not access this route" });
 };
+
+export const checkIsAdminUser = async (req, res, next) => {
+  if (req.user.role === "Admin") return next();
+  res.status(403).json({ error: "You can not delete users" });
+};
