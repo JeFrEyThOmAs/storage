@@ -5,6 +5,7 @@ import mongoose , { Types} from "mongoose";
 import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import Session from "../models/sessionModel.js";
+import redisClient from "../config/redis.mjs";
 
 export const sendOtp = async (req, res, next) => {
   const { email } = req.body;
@@ -47,9 +48,13 @@ export const loginWithGoogle = async (req, res, next) => {
       await user.save(); 
     }
 
-    const session = await Session.create({ userId: user._id });
+    const sessionId = crypto.randomUUID();
+    const redisKey = `session:${sessionId}`
+    await redisClient.json.set( redisKey ,"$" , {userId : user._id})
+  
+    redisClient.expire(redisKey , 60 * 60 * 24 * 7)
 
-    res.cookie("sid", session.id, {
+    res.cookie("sid", sessionId, {
       httpOnly: true,
       signed: true,
       maxAge: 60 * 1000 * 60 * 24 * 7,
@@ -88,12 +93,16 @@ export const loginWithGoogle = async (req, res, next) => {
       { mongooseSession }
     );
 
-    const session = await Session.create({ userId: userId });
+    const sessionId = crypto.randomUUID();
+    const redisKey = `session:${sessionId}`
+    await redisClient.json.set( redisKey ,"$" , {userId : user._id})
+  
+    redisClient.expire(redisKey , 60 * 60 * 1000 * 24 * 7)
 
-    res.cookie("sid", session.id, {
+    res.cookie("sid", sessionId, {
       httpOnly: true,
       signed: true,
-      maxAge: 60 * 1000 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     mongooseSession.commitTransaction();

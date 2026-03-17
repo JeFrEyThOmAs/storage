@@ -7,6 +7,7 @@ import Session from "../models/sessionModel.js";
 import OTP from "../models/otpModel.js";
 import File from "../models/fileModel.js";
 import { error } from "node:console";
+import redisClient from "../config/redis.mjs";
 
 
 
@@ -110,13 +111,16 @@ export const login = async (req, res, next) => {
   if(allSessions.length >= 2){ 
     await allSessions[0].deleteOne()
   }
+  const sessionId = crypto.randomUUID();
+  const redisKey = `session:${sessionId}`
+  await redisClient.json.set( redisKey ,"$" , {userId : user._id})
 
-  const session = await Session.create({userId : user._id})
+  redisClient.expire(redisKey , 60 * 60 * 24 * 7)
 
 
   res.cookie(
     "sid",
-    session.id,
+    sessionId,
     {
       httpOnly: true,
       signed: true,
@@ -148,9 +152,14 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const logout = async(req, res) => {
-  const { sid } = req.signedCookies
-  const session = await Session.findByIdAndDelete(sid)
+  const { sid } = req.signedCookies;
+
+  if (sid) {
+    await redisClient.del(`session:${sid}`);
+  }
+
   res.clearCookie("sid");
+
   res.status(204).end();
 };
 
