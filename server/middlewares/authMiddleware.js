@@ -2,6 +2,7 @@ import e from "express";
 import User from "../models/userModel.js";
 import crypto from "node:crypto";
 import Session from "../models/sessionModel.js";
+import redisClient from "../config/redis.mjs";
 
 
 
@@ -13,7 +14,7 @@ export default async function checkAuth(req, res, next) {
     res.clearCookie("sid");
     return res.status(401).json({ error: "Not logged in!" });
   }
-  const session = await Session.findById(sid);
+  const session = await redisClient.json.get(`session:${sid}`);
   if(!session){
     res.clearCookie("sid");
     return res.status(401).json({ error: "Not logged in!" });
