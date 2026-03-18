@@ -79,7 +79,7 @@ export const loginWithGoogle = async (req, res, next) => {
         parentDirId: null,
         userId,
       },
-      { mongooseSession }
+      { session : mongooseSession }
     );
 
     await User.insertOne(
@@ -90,14 +90,14 @@ export const loginWithGoogle = async (req, res, next) => {
         picture,
         rootDirId,
       },
-      { mongooseSession }
+      { session : mongooseSession }
     );
 
     const sessionId = crypto.randomUUID();
     const redisKey = `session:${sessionId}`
-    await redisClient.json.set( redisKey ,"$" , {userId : user._id})
+    await redisClient.json.set( redisKey ,"$" , {userId})
   
-    redisClient.expire(redisKey , 60 * 60 * 1000 * 24 * 7)
+    await redisClient.expire(redisKey , 60 * 60 * 24 * 7)
 
     res.cookie("sid", sessionId, {
       httpOnly: true,

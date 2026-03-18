@@ -106,11 +106,25 @@ export const login = async (req, res, next) => {
     return res.status(403).json({ error: "Your account has been deleted. Contact App Admin" });
   }
   
-  const allSessions = await Session.find({userId : user._id}).sort({createdAt : -1})
+  // const allSessions = await Session.find({userId : user._id}).sort({createdAt : -1})
 
-  if(allSessions.length >= 2){ 
-    await allSessions[0].deleteOne()
+  // if(allSessions.length >= 2){ 
+  //   await allSessions[0].deleteOne()
+  // }
+  const allSessions = await redisClient.ft.search(
+    "userIdx",
+    `@userId:{${user.id}}`,
+    {
+      RETURN: [],
+    }
+  );
+
+  console.log(allSessions.documents);
+
+  if (allSessions.total >= 2) {
+    await redisClient.del(allSessions.documents[0].id);
   }
+
   const sessionId = crypto.randomUUID();
   const redisKey = `session:${sessionId}`
   await redisClient.json.set( redisKey ,"$" , {userId : user._id})
@@ -140,15 +154,48 @@ export const getCurrentUser = (req, res) => {
   });
 };
 
-export const getAllUsers = async (req, res) => {
-  const allUsers = await User.find({deleted : false}).lean()
-  const allSessions = await Session.find().lean()
-  const allSessionsUserId = allSessions.map(({userId}) => userId.toString())
-  const allSessionsUserIdSet = new Set(allSessionsUserId)
+// export const getAllUsers = async (req, res) => {
+//   const allUsers = await User.find({deleted : false}).lean()
+//   const allSessions = await Session.find().lean()
+//   const allSessionsUserId = allSessions.map(({userId}) => userId.toString())
+//   const allSessionsUserIdSet = new Set(allSessionsUserId)
 
-  const transformedUsers = allUsers.map(({_id , name , email}) => (
-    {id : _id , name , email , isLoggedIn : allSessionsUserIdSet.has(_id.toString())}))
-  res.status(200).json(transformedUsers);
+//   const transformedUsers = allUsers.map(({_id , name , email}) => (
+//     {id : _id , name , email , isLoggedIn : allSessionsUserIdSet.has(_id.toString())}))
+//   res.status(200).json(transformedUsers);
+// };
+
+export const getAllUsers = async (req, res, next) => {
+  try {
+    // 1. get all users from DB
+    const allUsers = await User.find({ deleted: false }).lean();
+
+    // 2. get all sessions from redis index
+    const allSessions = await redisClient.ft.search(
+      "userIdx",
+      "*",
+      { RETURN: ["userId"] }
+    );
+
+    // 3. collect userIds that have active sessions
+    const allSessionsUserId = allSessions.documents.map(
+      (doc) => doc.value.userId.toString()
+    );
+
+    const allSessionsUserIdSet = new Set(allSessionsUserId);
+
+    // 4. transform users
+    const transformedUsers = allUsers.map(({ _id, name, email }) => ({
+      id: _id,
+      name,
+      email,
+      isLoggedIn: allSessionsUserIdSet.has(_id.toString())
+    }));
+
+    res.status(200).json(transformedUsers);
+  } catch (err) {
+    next(err);
+  }
 };
 
 export const logout = async(req, res) => {
@@ -163,33 +210,119 @@ export const logout = async(req, res) => {
   res.status(204).end();
 };
 
-export const logoutById = async(req, res) => {
+// export const logoutById = async(req, res) => {
+//   try {
+//     await Session.deleteMany({userId : req.params.userId})
+//     res.status(204).end();
+//   }catch(err){
+//     next(err)
+//   }
+// };
+
+export const logoutById = async (req, res, next) => {
   try {
-    await Session.deleteMany({userId : req.params.userId})
+    const { userId } = req.params;
+
+    // find sessions for that user
+    const sessions = await redisClient.ft.search(
+      "userIdx",
+      `@userId:{${userId}}`,
+      { RETURN: [] }
+    );
+
+    // extract redis keys
+    const keys = sessions.documents.map(doc => doc.id);
+
+    // delete those keys
+    if (keys.length) {
+      await redisClient.del(keys);
+    }
+
     res.status(204).end();
-  }catch(err){
-    next(err)
+  } catch (err) {
+    next(err);
   }
 };
 
-export const logoutAll = async(req, res) => {
-  const { sid } = req.signedCookies
-  const session = await Session.findById(sid)
-  await Session.deleteMany({userId : session.userId})
+// export const logoutAll = async(req, res) => {
+//   const { sid } = req.signedCookies
+//   const session = await Session.findById(sid)
+//   await Session.deleteMany({userId : session.userId})
+//   res.clearCookie("sid");
+//   res.status(204).end();
+// };
+export const logoutAll = async (req, res) => {
+  const { sid } = req.signedCookies;
+
+  // get current session
+  const session = await redisClient.json.get(`session:${sid}`);
+
+  if (!session) {
+    return res.status(401).json({ error: "Invalid session" });
+  }
+
+  // find all sessions of this user
+  const allSessions = await redisClient.ft.search(
+    "userIdx",
+    `@userId:{${session.userId}}`,
+    {
+      RETURN: [],
+    }
+  );
+
+  // collect redis keys
+  const keys = allSessions.documents.map(doc => doc.id);
+
+  // delete all sessions
+  if (keys.length) {
+    await redisClient.del(keys);
+  }
+
   res.clearCookie("sid");
   res.status(204).end();
 };
 
-export const deleteUser = async(req, res , next) => {
-  const {userId} = req.params
-  if(userId === req.user._id.toString()){
-    return res.status(403).json({error : "Cannot delete yourself"})
+// export const deleteUser = async(req, res , next) => {
+//   const {userId} = req.params
+//   if(userId === req.user._id.toString()){
+//     return res.status(403).json({error : "Cannot delete yourself"})
+//   }
+//   try {
+//     await Session.deleteMany({userId : req.params.userId})
+//     await User.findByIdAndUpdate(userId , {deleted : true})
+//     res.status(204).end();
+//   }catch(err){
+//     next(err)
+//   }
+// };
+export const deleteUser = async (req, res, next) => {
+  const { userId } = req.params;
+
+  if (userId === req.user._id.toString()) {
+    return res.status(403).json({ error: "Cannot delete yourself" });
   }
+
   try {
-    await Session.deleteMany({userId : req.params.userId})
-    await User.findByIdAndUpdate(userId , {deleted : true})
+    // find all sessions belonging to the user
+    const sessions = await redisClient.ft.search(
+      "userIdx",
+      `@userId:{${userId}}`,
+      { RETURN: [] }
+    );
+
+    // extract redis keys
+    const keys = sessions.documents.map(doc => doc.id);
+
+    // delete those sessions
+    if (keys.length) {
+      await redisClient.del(keys);
+    }
+
+    // soft delete the user
+    await User.findByIdAndUpdate(userId, { deleted: true });
+
     res.status(204).end();
-  }catch(err){
-    next(err)
+  } catch (err) {
+    next(err);
   }
 };
