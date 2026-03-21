@@ -19,7 +19,8 @@
     "google-auth-library": "^10.6.1",
     "mime-types": "^2.1.35",
     "mongoose": "^8.12.1",
-    "redis": "^5.11.0"
+    "redis": "^5.11.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "prettier": "^3.4.2"

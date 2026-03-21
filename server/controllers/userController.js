@@ -8,13 +8,23 @@ import OTP from "../models/otpModel.js";
 import File from "../models/fileModel.js";
 import { error } from "node:console";
 import redisClient from "../config/redis.mjs";
+import { loginSchema, registerSchema } from "../validators/authSchema.js";
+import z from "zod";
 
 
 
 // const secret = process.env.SECRET
 
 export const register = async (req, res, next) => {
-  const { name, email, password, otp} = req.body;
+
+  const {success , data , error} = registerSchema.safeParse(req.body)
+
+  if(!success){
+    console.log(error.issues)
+    return res.status(400).json({error : "Invalid input, please enter valid details"})
+  }
+
+  const { name, email, password, otp} = data;
 
   const otpRecord = await OTP.findOne({ email, otp });
 
@@ -79,7 +89,15 @@ export const register = async (req, res, next) => {
 };
 
 export const login = async (req, res, next) => {
-  const { email, password } = req.body;
+
+  const {success , data , error} = loginSchema.safeParse(req.body)
+
+  if(!success){
+    console.log(error.issues)
+    return res.status(400).json({error : "Invalid input, please enter valid details"})
+  }
+
+  const { email, password } = data;
 
   
   const user = await User.findOne({ email}).lean();

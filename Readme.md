@@ -1321,3 +1321,225 @@ Redis is a **high-speed in-memory data store** used for:
 * Leaderboards
 
 It dramatically improves **application speed and scalability** by reducing database workload.
+
+
+# 🛡️ SQL / NoSQL Injection Security Guide (MERN Stack)
+
+## 📖 Overview
+
+Injection attacks are one of the most dangerous vulnerabilities in web applications.
+
+Even though the MERN stack uses **MongoDB (NoSQL)** instead of SQL, the same concept applies:
+
+> ⚠️ If you trust user input blindly, attackers can manipulate your database queries.
+
+---
+
+## 💡 What is SQL Injection?
+
+**SQL Injection (SQLi)** is when an attacker injects malicious SQL code into input fields to:
+
+- Bypass authentication  
+- Access sensitive data  
+- Modify or delete database records  
+
+---
+
+## 💥 Classic SQL Injection Example
+
+### ❌ Vulnerable Code
+
+    const query = `SELECT * FROM users WHERE email = '${email}' AND password = '${password}'`;
+
+### 🔥 Malicious Input
+
+    email: admin@example.com
+    password: ' OR '1'='1
+
+### 💣 Final Query Becomes
+
+    SELECT * FROM users WHERE email = 'admin@example.com' AND password = '' OR '1'='1';
+
+👉 This condition is always TRUE → attacker logs in without password
+
+---
+
+## ⚠️ NoSQL Injection (MongoDB in MERN)
+
+MongoDB is not immune — it suffers from **NoSQL Injection**
+
+---
+
+## 💥 Example in MERN
+
+### ❌ Vulnerable Code
+
+    const user = await User.findOne({
+      email: req.body.email,
+      password: req.body.password
+    });
+
+### 🔥 Malicious Input (JSON)
+
+    {
+      "email": { "$ne": null },
+      "password": { "$ne": null }
+    }
+
+### 💣 What Happens?
+
+MongoDB interprets:
+
+    { email: { $ne: null }, password: { $ne: null } }
+
+👉 This means:
+- email ≠ null → true for many users  
+- password ≠ null → true  
+
+🚨 Result: attacker logs in as **any user**
+
+---
+
+## 🚨 Real Risks for Your Drive App
+
+If you're building something like Google Drive:
+
+- 📂 Unauthorized file access  
+- 🔓 Account takeover  
+- 🗑️ File deletion or modification  
+- 📤 Data leaks (private files exposed)  
+
+---
+
+## 🔐 How to Prevent Injection Attacks
+
+### 1. ✅ Never Trust User Input
+
+Always validate and sanitize input before using it.
+
+---
+
+### 2. ✅ Use Mongoose Safely
+
+Avoid passing raw objects directly from user input:
+
+    // ❌ Bad
+    User.findOne(req.body);
+
+    // ✅ Good
+    User.findOne({
+      email: String(req.body.email),
+      password: String(req.body.password)
+    });
+
+---
+
+### 3. ✅ Disable MongoDB Operators from Input
+
+Attackers use operators like:
+
+- $ne  
+- $gt  
+- $or  
+
+Install sanitizer:
+
+    npm install mongo-sanitize
+
+Usage:
+
+    import mongoSanitize from "mongo-sanitize";
+
+    const clean = mongoSanitize(req.body);
+
+---
+
+### 4. ✅ Use Strict Schema Validation
+
+    const userSchema = new mongoose.Schema({
+      email: { type: String, required: true },
+      password: { type: String, required: true }
+    }, { strict: true });
+
+---
+
+## 🧠 Role of Zod in Security
+
+### 📌 What is Zod?
+
+Zod is a **TypeScript-first schema validation library** used to validate user input.
+
+---
+
+## 🔐 How Zod Helps Prevent Injection
+
+Zod ensures:
+
+- Input is of correct type  
+- No unexpected objects are allowed  
+- Prevents malicious payloads like `{ $ne: null }`  
+
+---
+
+## ✅ Example with Zod
+
+    import { z } from "zod";
+
+    const loginSchema = z.object({
+      email: z.string().email(),
+      password: z.string().min(6)
+    });
+
+---
+
+### 🚫 Attack Attempt
+
+    {
+      "email": { "$ne": null },
+      "password": { "$ne": null }
+    }
+
+### ❌ Zod Result
+
+    ZodError: Expected string, received object
+
+👉 Attack blocked before hitting database
+
+---
+
+## 🔒 Using Zod in Express Middleware
+
+    const validate = (schema) => (req, res, next) => {
+      try {
+        req.body = schema.parse(req.body);
+        next();
+      } catch (err) {
+        return res.status(400).json({ error: err.errors });
+      }
+    };
+
+---
+
+## 🚀 Best Practices Summary
+
+- ✅ Always validate input (Zod)  
+- ✅ Sanitize input (mongo-sanitize)  
+- ✅ Avoid dynamic queries  
+- ✅ Use strict schemas  
+- ✅ Never trust client-side validation alone  
+- ✅ Hash passwords (bcrypt)  
+- ✅ Use authentication tokens (JWT)  
+
+---
+
+## 🧩 Final Thought
+
+> Injection attacks are not about SQL or MongoDB —  
+> they are about trusting user input blindly.
+
+If you:
+- Validate (Zod)  
+- Sanitize  
+- Control query structure  
+
+👉 You eliminate most real-world attacks
