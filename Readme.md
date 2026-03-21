@@ -1543,3 +1543,190 @@ If you:
 - Control query structure  
 
 👉 You eliminate most real-world attacks
+
+
+
+# 🌐 Understanding Same-Origin Policy (SOP)
+
+## 📖 What is Same-Origin Policy?
+
+Same-Origin Policy (SOP) is a **browser security rule** that restricts how web pages interact with each other.
+
+> 👉 A website can only access resources from the SAME origin.
+
+---
+
+## 🧠 What is an Origin?
+
+An origin is defined by:
+
+    protocol + host + port
+
+---
+
+## ✅ Same Origin Example
+
+    http://example.com:80
+    http://example.com:80
+
+✔ Same protocol  
+✔ Same domain  
+✔ Same port  
+
+👉 SAME ORIGIN ✅
+
+---
+
+## ❌ Different Origin Examples
+
+### 1. Different Protocol
+
+    http://example.com
+    https://example.com
+
+👉 DIFFERENT ORIGIN ❌
+
+---
+
+### 2. Different Domain
+
+    https://example.com
+    https://api.example.com
+
+👉 DIFFERENT ORIGIN ❌ (subdomain counts!)
+
+---
+
+### 3. Different Port
+
+    http://localhost:3000
+    http://localhost:4000
+
+👉 DIFFERENT ORIGIN ❌
+
+---
+
+## ❗ What DOES NOT affect origin
+
+### Path
+
+    https://example.com/page1
+    https://example.com/page2
+
+👉 SAME ORIGIN ✅
+
+---
+
+### Query Params
+
+    https://example.com?x=1
+    https://example.com?x=2
+
+👉 SAME ORIGIN ✅
+
+---
+
+### Hash
+
+    https://example.com#home
+    https://example.com#about
+
+👉 SAME ORIGIN ✅
+
+---
+
+## 🔐 Why Same-Origin Policy exists
+
+To prevent malicious websites from:
+
+- ❌ Reading your bank data
+- ❌ Accessing cookies from other sites
+- ❌ Making unauthorized requests
+
+---
+
+## 💥 Example Attack (Without SOP)
+
+Imagine:
+
+    You are logged into bank.com
+
+Then you visit:
+
+    evil.com
+
+Without SOP, evil.com could:
+
+- Read your bank account data ❌
+- Steal session cookies ❌
+
+👉 SOP prevents this
+
+---
+
+## ⚠️ SOP Restricts
+
+- Reading API responses from another origin
+- Accessing DOM of another site
+- Accessing cookies of another domain
+
+---
+
+## 🚀 Then how do apps communicate?
+
+👉 Using **CORS (Cross-Origin Resource Sharing)**
+
+---
+
+## 🔓 CORS Example (Backend - Express)
+
+    app.use(cors({
+      origin: "http://localhost:5173",
+      credentials: true
+    }));
+
+👉 Allows frontend to talk to backend
+
+---
+
+## 💻 Real Project Example (MERN)
+
+    Frontend: http://localhost:5173
+    Backend:  http://localhost:4000
+
+👉 Different ports → DIFFERENT ORIGIN ❌
+
+➡️ Need CORS to allow communication
+
+---
+
+## 🧠 Important Rule
+
+> If protocol OR domain OR port changes → origin changes
+
+---
+
+## 🧩 SOP vs CORS
+
+| Feature | Purpose |
+|--------|--------|
+| SOP | Blocks cross-origin access |
+| CORS | Allows controlled access |
+
+---
+
+## 🔥 TL;DR
+
+- Origin = protocol + domain + port  
+- Same origin → full access  
+- Different origin → blocked by default  
+- CORS → allows safe communication  
+
+---
+
+## 💬 Final Thought
+
+> SOP protects users  
+> CORS enables developers  
+
+Both together make the web secure AND usable
