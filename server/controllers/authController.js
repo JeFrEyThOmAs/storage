@@ -6,6 +6,7 @@ import User from "../models/userModel.js";
 import Directory from "../models/directoryModel.js";
 import Session from "../models/sessionModel.js";
 import redisClient from "../config/redis.mjs";
+import { otpSchema } from "../validators/authSchema.js";
 
 export const sendOtp = async (req, res, next) => {
   const { email } = req.body;
@@ -14,7 +15,14 @@ export const sendOtp = async (req, res, next) => {
 };
 
 export const verifyOtp = async (req, res, next) => {
-  const { email, otp } = req.body;
+  const {success , data , error} = otpSchema.safeParse(req.body)
+
+  if(!success){
+    console.log(error.issues)
+    return res.status(400).json({error : "Invalid otp"})
+  }
+
+  const { email, otp } = data;
   const otpRecord = await OTP.findOne({ email, otp });
 
   if (!otpRecord) {
