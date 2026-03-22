@@ -2152,3 +2152,7 @@ Serves malicious file (steal.js)
 Receives stolen data
 
 Stores it in MongoDB
+
+
+
+
