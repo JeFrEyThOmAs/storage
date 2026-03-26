@@ -26,6 +26,46 @@ app.use(
   })
 );
 
+const rateLimitStore = {};
+
+function rateLimiter({ windowSize, numberOfRequests }) {
+  return function (req, res, next) {
+    const currentTime = Date.now();
+
+    if (!rateLimitStore[req.ip]) {
+      rateLimitStore[req.ip] = {
+        startTime: currentTime,
+        count: 1,
+      };
+      return next();
+    }
+
+    if (currentTime - rateLimitStore[req.ip].startTime > windowSize) {
+      rateLimitStore[req.ip] = {
+        startTime: currentTime,
+        count: 1,
+      };
+    } else {
+      rateLimitStore[req.ip].count++;
+
+      if (rateLimitStore[req.ip].count > numberOfRequests) {
+        return res
+          .status(429)
+          .json({ error: "Too many request. Slow down please." });
+      }
+    }
+    console.log(rateLimitStore);
+    next();
+  };
+}
+
+const limiter = rateLimiter({
+  windowSize: 60 * 1000,
+  numberOfRequests: 50,
+})
+
+app.use(limiter);
+
 app.use("/directory", checkAuth, directoryRoutes);
 app.use("/file", checkAuth, fileRoutes);
 app.use("/", userRoutes);
