@@ -9,6 +9,7 @@ import authRoutes from "./routes/authRoutes.js"
 import checkAuth from "./middlewares/authMiddleware.js";
 import { connectDB } from "./config/db.js";
 import { rateLimit } from "express-rate-limit";
+import helmet from "helmet"
 
 dotenv.config();
 
@@ -37,8 +38,9 @@ const limiter = rateLimit({
 	// store: ... , // Redis, Memcached, etc. See below.
 })
 
-
+app.use(helmet())
 app.use(limiter)
+
 
 
 app.use("/directory", checkAuth, directoryRoutes);
