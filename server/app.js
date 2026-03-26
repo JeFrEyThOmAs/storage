@@ -8,6 +8,9 @@ import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js"
 import checkAuth from "./middlewares/authMiddleware.js";
 import { connectDB } from "./config/db.js";
+import { rateLimit } from "express-rate-limit";
+import helmet from "helmet"
+import {slowDown} from "express-slow-down"
 
 dotenv.config();
 
@@ -25,11 +28,32 @@ app.use(
     credentials: true,
   })
 );
+const throttle = slowDown({
+  windowMs: 60 * 1000,
+  delayAfter: 20,
+  delayMs: (hits) => Math.min(hits * 200, 2000),
+});
+
+
+
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+	standardHeaders: 'draft-8', // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+	ipv6Subnet: 56, // Set to 60 or 64 to be less aggressive, or 52 or 48 to be more aggressive
+	// store: ... , // Redis, Memcached, etc. See below.
+})
+
+app.use(helmet())
+app.use(limiter)
+
+
 
 app.use("/directory", checkAuth, directoryRoutes);
 app.use("/file", checkAuth, fileRoutes);
-app.use("/", userRoutes);
-app.use("/auth" , authRoutes)
+app.use("/", throttle, userRoutes);
+app.use("/auth" , throttle , authRoutes)
 
 app.use((err, req, res, next) => {
   console.log(err);
