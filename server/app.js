@@ -10,6 +10,7 @@ import checkAuth from "./middlewares/authMiddleware.js";
 import { connectDB } from "./config/db.js";
 import { rateLimit } from "express-rate-limit";
 import helmet from "helmet"
+import {slowDown} from "express-slow-down"
 
 dotenv.config();
 
@@ -27,6 +28,12 @@ app.use(
     credentials: true,
   })
 );
+const throttle = slowDown({
+  windowMs: 60 * 1000,
+  delayAfter: 20,
+  delayMs: (hits) => Math.min(hits * 200, 2000),
+});
+
 
 
 const limiter = rateLimit({
@@ -45,8 +52,8 @@ app.use(limiter)
 
 app.use("/directory", checkAuth, directoryRoutes);
 app.use("/file", checkAuth, fileRoutes);
-app.use("/", userRoutes);
-app.use("/auth" , authRoutes)
+app.use("/", throttle, userRoutes);
+app.use("/auth" , throttle , authRoutes)
 
 app.use((err, req, res, next) => {
   console.log(err);
