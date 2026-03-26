@@ -8,6 +8,7 @@ import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js"
 import checkAuth from "./middlewares/authMiddleware.js";
 import { connectDB } from "./config/db.js";
+import { rateLimit } from "express-rate-limit";
 
 dotenv.config();
 
@@ -26,45 +27,19 @@ app.use(
   })
 );
 
-const rateLimitStore = {};
 
-function rateLimiter({ windowSize, numberOfRequests }) {
-  return function (req, res, next) {
-    const currentTime = Date.now();
-
-    if (!rateLimitStore[req.ip]) {
-      rateLimitStore[req.ip] = {
-        startTime: currentTime,
-        count: 1,
-      };
-      return next();
-    }
-
-    if (currentTime - rateLimitStore[req.ip].startTime > windowSize) {
-      rateLimitStore[req.ip] = {
-        startTime: currentTime,
-        count: 1,
-      };
-    } else {
-      rateLimitStore[req.ip].count++;
-
-      if (rateLimitStore[req.ip].count > numberOfRequests) {
-        return res
-          .status(429)
-          .json({ error: "Too many request. Slow down please." });
-      }
-    }
-    console.log(rateLimitStore);
-    next();
-  };
-}
-
-const limiter = rateLimiter({
-  windowSize: 60 * 1000,
-  numberOfRequests: 50,
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+	standardHeaders: 'draft-8', // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+	ipv6Subnet: 56, // Set to 60 or 64 to be less aggressive, or 52 or 48 to be more aggressive
+	// store: ... , // Redis, Memcached, etc. See below.
 })
 
-app.use(limiter);
+
+app.use(limiter)
+
 
 app.use("/directory", checkAuth, directoryRoutes);
 app.use("/file", checkAuth, fileRoutes);
