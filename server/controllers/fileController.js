@@ -18,11 +18,15 @@ export const uploadFile = async (req, res, next) => {
     }
 
     const filename = req.headers.filename || "untitled";
+    const fileSize = req.headers.filesize || 0;
+    console.log(filename)
+    console.log(fileSize)
     const extension = path.extname(filename);
 
     const insertedFile = await File.insertOne({
       extension,
       name: filename,
+      size: fileSize,
       parentDirId: parentDirData._id,
       userId: req.user._id,
     });
