@@ -3,7 +3,7 @@ import DirectoryView from "./DirectoryView";
 import Register from "./Register";
 import "./App.css";
 import Login from "./Login";
-import UsersPage from "./userPage.jsx";
+import UsersPage from "./UsersPage.jsx";
 
 const router = createBrowserRouter([
   {
