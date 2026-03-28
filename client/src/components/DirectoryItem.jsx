@@ -121,6 +121,7 @@ import {
 import { BsThreeDotsVertical } from "react-icons/bs";
 import ContextMenu from "./ContextMenu";
 import { useDirectoryContext } from "../context/DirectoryContext";
+import { formatSize } from "./DetailsPopup";
 
 function DirectoryItem({ item, uploadProgress }) {
   const {
@@ -160,7 +161,7 @@ function DirectoryItem({ item, uploadProgress }) {
       }
       onContextMenu={(e) => handleContextMenu(e, item.id)}
     >
-      <div className="flex justify-between">
+      <div className="flex justify-between" title={`size : ${formatSize(item.size)}\n created at : ${new Date(item.createdAt).toLocaleString()}\n updated at : ${new Date(item.updatedAt).toLocaleString()}`}>
         <div className="flex items-center gap-2">
           {item.isDirectory ? (
             <FaFolder className="text-amber-500 text-lg" />

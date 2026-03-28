@@ -5,6 +5,15 @@ import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import { error } from "console";
 
+export async function updateDirectoriesSize(parentId, deltaSize) {
+  while (parentId) {
+    const dir = await Directory.findById(parentId);
+    dir.size += deltaSize;
+    await dir.save();
+    parentId = dir.parentDirId;
+  }
+}
+
 export const uploadFile = async (req, res, next) => {
   const parentDirId = req.params.parentDirId || req.user.rootDirId;
   try {
@@ -73,9 +82,10 @@ req.on("data", async (chunk) => {
   }
 });
 
-    req.on("end", async () => {
-      return res.status(201).json({ message: "File Uploaded" });
-    });
+req.on("end", async () => {
+  await updateDirectoriesSize(parentDirId, totalFileSize);
+  return res.status(201).json({ message: "File Uploaded" });
+});
 
     req.on("error", async () => {
       await File.deleteOne({ _id: insertedFile.insertedId });
@@ -141,7 +151,7 @@ export const deleteFile = async (req, res, next) => {
   const file = await File.findOne({
     _id: id,
     userId: req.user._id,
-  }).select("extension");
+  });
 
   if (!file) {
     return res.status(404).json({ error: "File not found!" });
@@ -150,6 +160,7 @@ export const deleteFile = async (req, res, next) => {
   try {
     await rm(`./storage/${id}${file.extension}`);
     await file.deleteOne();
+    await updateDirectoriesSize(file.parentDirId, -file.size);
     return res.status(200).json({ message: "File Deleted Successfully" });
   } catch (err) {
     next(err);
