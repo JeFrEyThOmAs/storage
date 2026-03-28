@@ -163,12 +163,15 @@ export const login = async (req, res, next) => {
   res.json({ message: "logged in" });
 };
 
-export const getCurrentUser = (req, res) => {
+export const getCurrentUser = async (req, res) => {
+  const rootDir = await Directory.findById(req.user.rootDirId).lean();
   res.status(200).json({
     name: req.user.name,
     email: req.user.email,
     picture : req.user.picture,
-    role : req.user.role
+    role : req.user.role,
+    maxStorageInBytes : req.user.maxStorageInBytes,
+    usedStorageInBytes : rootDir.size
   });
 };
 
