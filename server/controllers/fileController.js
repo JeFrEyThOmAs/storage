@@ -56,14 +56,14 @@ export const uploadFile = async (req, res, next) => {
     const writeStream = createWriteStream(filePath);
     // req.pipe(writeStream);
     let totalFileSize = 0;
-let aborted = false;
+    let aborted = false;
 
 req.on("data", async (chunk) => {
   if (aborted) return;
 
   totalFileSize += chunk.length;
 
-  if (totalFileSize > 50 * 1024 * 1024) {
+  if (totalFileSize > 1024 * 1024 * 1024) {
     aborted = true;
     req.pause();
     writeStream.destroy();
