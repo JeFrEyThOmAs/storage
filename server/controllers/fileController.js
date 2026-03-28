@@ -47,19 +47,31 @@ export const uploadFile = async (req, res, next) => {
     const writeStream = createWriteStream(filePath);
     // req.pipe(writeStream);
     let totalFileSize = 0;
-    let aborted = false;
-    req.on("data" , async (chunk) => {
-      if  (aborted) return;
-      totalFileSize += chunk.length
-      if(totalFileSize > 50 * 1024 * 1024){
-        aborted = true
-        writeStream.close()
-        await insertedFile.deleteOne()
-        await rm(filePath)
-        return res.destroy()
-      }
-      writeStream.write(chunk);
-    })
+let aborted = false;
+
+req.on("data", async (chunk) => {
+  if (aborted) return;
+
+  totalFileSize += chunk.length;
+
+  if (totalFileSize > 50 * 1024 * 1024) {
+    aborted = true;
+    req.pause();
+    writeStream.destroy();
+    await insertedFile.deleteOne();
+    await rm(filePath);
+    return res.destroy();
+  }
+
+  const canContinue = writeStream.write(chunk);
+
+  if (!canContinue) {
+    req.pause();
+    writeStream.once("drain", () => {
+      req.resume();
+    });
+  }
+});
 
     req.on("end", async () => {
       return res.status(201).json({ message: "File Uploaded" });
