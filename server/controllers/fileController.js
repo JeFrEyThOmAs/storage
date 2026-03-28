@@ -21,11 +21,11 @@ export const uploadFile = async (req, res, next) => {
     const filename = req.headers.filename || "untitled";
     const fileSize = req.headers.filesize || 0;
 
-    if(fileSize > 50 * 1024 * 1024){
-      return res.socket.destroy();
-      // res.header("Connection", "close");
-      // res.end();
-    }
+    // if(fileSize > 50 * 1024 * 1024){
+    //   return res.socket.destroy();
+    //   // res.header("Connection", "close");
+    //   // res.end();
+    // }
 
     console.log(filename)
     console.log(fileSize)
@@ -42,9 +42,24 @@ export const uploadFile = async (req, res, next) => {
     const fileId = insertedFile.id;
 
     const fullFileName = `${fileId}${extension}`;
+    const filePath = `./storage/${fullFileName}`;
 
-    const writeStream = createWriteStream(`./storage/${fullFileName}`);
-    req.pipe(writeStream);
+    const writeStream = createWriteStream(filePath);
+    // req.pipe(writeStream);
+    let totalFileSize = 0;
+    let aborted = false;
+    req.on("data" , async (chunk) => {
+      if  (aborted) return;
+      totalFileSize += chunk.length
+      if(totalFileSize > 50 * 1024 * 1024){
+        aborted = true
+        writeStream.close()
+        await insertedFile.deleteOne()
+        await rm(filePath)
+        return res.destroy()
+      }
+      writeStream.write(chunk);
+    })
 
     req.on("end", async () => {
       return res.status(201).json({ message: "File Uploaded" });
