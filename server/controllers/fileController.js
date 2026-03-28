@@ -3,6 +3,7 @@ import { rm } from "fs/promises";
 import path from "path";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
+import { error } from "console";
 
 export const uploadFile = async (req, res, next) => {
   const parentDirId = req.params.parentDirId || req.user.rootDirId;
@@ -19,6 +20,13 @@ export const uploadFile = async (req, res, next) => {
 
     const filename = req.headers.filename || "untitled";
     const fileSize = req.headers.filesize || 0;
+
+    if(fileSize > 50 * 1024 * 1024){
+      return res.socket.destroy();
+      // res.header("Connection", "close");
+      // res.end();
+    }
+
     console.log(filename)
     console.log(fileSize)
     const extension = path.extname(filename);
