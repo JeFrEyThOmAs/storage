@@ -4,7 +4,6 @@ import {
   deleteFile,
   getFile,
   renameFile,
-  uploadFile,
   uploadInitiate,
 } from "../controllers/fileController.js";
 
@@ -15,7 +14,7 @@ router.param("id", validateIdMiddleware);
 
 router.post("/upload/initiate" , uploadInitiate)
 
-router.post("/:parentDirId?", uploadFile);
+// router.post("/:parentDirId?", uploadFile);
 
 router.get("/:id", getFile);
 
