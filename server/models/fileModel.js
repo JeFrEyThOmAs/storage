@@ -18,6 +18,9 @@ const fileSchema = new Schema(
       type: Schema.Types.ObjectId,
       required: true,
     },
+    isUploading: {
+      type: Schema.Types.Boolean,
+    },
     parentDirId: {
       type: Schema.Types.ObjectId,
       ref: "Directory",
