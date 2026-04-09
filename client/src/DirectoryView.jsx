@@ -809,7 +809,7 @@ import {
   renameDirectory,
 } from "./apis/directoryApi";
 
-import { deleteFile, renameFile, uploadInitiate } from "./apis/fileApi";
+import { deleteFile, renameFile, uploadComplete, uploadInitiate } from "./apis/fileApi";
 import DetailsPopup from "./components/DetailsPopup";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModel";
 
@@ -916,54 +916,30 @@ function DirectoryView() {
       progress: 0,
     };
 
-    const data = await uploadInitiate({
-      name: file.name,
-      size: file.size ,
-      contentType: file.type ,
-      parentDirId : dirId 
-    });
-    console.log(data);
-
-    const { uploadSignedUrl, fileId } = data;
-
-
-    // Optimistically show the file in the list
-    setFilesList((prev) => [tempItem, ...prev]);
-    setUploadItem(tempItem);
-    e.target.value = "";
-
-    startUpload({ item: tempItem, uploadUrl: uploadSignedUrl, fileId });
+    try{
+      const data = await uploadInitiate({
+        name: file.name,
+        size: file.size ,
+        contentType: file.type ,
+        parentDirId : dirId 
+      });
+      console.log(data);
+  
+      const { uploadSignedUrl, fileId } = data;
+  
+  
+      // Optimistically show the file in the list
+      setFilesList((prev) => [tempItem, ...prev]);
+      setUploadItem(tempItem);
+      e.target.value = "";
+  
+      startUpload({ item: tempItem, uploadUrl: uploadSignedUrl, fileId });
+    }catch(err){
+      setErrorMessage(err.response.data.error);
+      setTimeout(() => setErrorMessage(""), 3000);
+    }
   }
 
-  // function startUpload({ item, uploadUrl, fileId }) {
-  //   const xhr = new XMLHttpRequest();
-  //   xhrRef.current = xhr;
-
-  //   xhr.open("PUT", uploadUrl);
-
-  //   xhr.upload.addEventListener("progress", (evt) => {
-  //     if (evt.lengthComputable) {
-  //       const progress = (evt.loaded / evt.total) * 100;
-  //       setUploadItem((prev) => (prev ? { ...prev, progress } : prev));
-  //     }
-  //   });
-
-  //   xhr.onload = () => {
-  //     // Clear upload state and refresh directory
-  //     setUploadItem(null);
-  //     loadDirectory();
-  //   };
-
-  //   xhr.onerror = () => {
-  //     setErrorMessage("Something went wrong. Please try again.");
-  //     // Remove temp item from the list
-  //     setFilesList((prev) => prev.filter((f) => f.id !== item.id));
-  //     setUploadItem(null);
-  //     setTimeout(() => setErrorMessage(""), 3000);
-  //   };
-
-  //   xhr.send(item.file);
-  // }
 
   function startUpload({ item, uploadUrl, fileId }) {
     const xhr = new XMLHttpRequest();
@@ -978,8 +954,18 @@ function DirectoryView() {
       }
     });
 
-    xhr.onload = () => {
+    xhr.onload = async () => {
       // Clear upload state and refresh directory
+      if(xhr.status === 200){
+        const fileUploadResponse = await uploadComplete(fileId);
+        console.log(fileUploadResponse);
+      }else {
+        console.log(xhr.response);
+        console.log(xhr.responseText);
+        setErrorMessage("File not uploaded");
+        setTimeout(() => setErrorMessage(""), 3000);
+      }
+
       setUploadItem(null);
       loadDirectory();
     };
