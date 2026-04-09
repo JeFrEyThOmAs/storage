@@ -1,4 +1,4 @@
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import dotenv from "dotenv";
@@ -53,3 +53,26 @@ export const createUploadSignedUrl = async ({ key, contentType }) => {
   
     return await s3Client.send(command);
   };
+
+
+  export const deleteS3File = async (key) => {
+    const command = new DeleteObjectCommand({
+      Bucket: "storageappjeff",
+      Key: key,
+    });
+  
+    return await s3Client.send(command);
+  };
+  
+  export const deleteS3Files = async (keys) => {
+    const command = new DeleteObjectsCommand({
+      Bucket: "storageappjeff",
+      Delete: {
+        Objects: keys,
+        Quiet: false, // set true to skip individual delete responses
+      },
+    });
+  
+    return await s3Client.send(command);
+  };
+  

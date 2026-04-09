@@ -4,7 +4,7 @@ import path from "path";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import User from "../models/userModel.js";
-import { createGetSignedUrl, createUploadSignedUrl, getS3FileMetaData } from "../config/s3.js";
+import { createGetSignedUrl, createUploadSignedUrl, deleteS3File, getS3FileMetaData } from "../config/s3.js";
 
 export async function updateDirectoriesSize(parentId, deltaSize) {
   while (parentId) {
@@ -171,7 +171,7 @@ export const deleteFile = async (req, res, next) => {
   try {
     await file.deleteOne();
     await updateDirectoriesSize(file.parentDirId, -file.size);
-    await rm(`./storage/${id}${file.extension}`);
+    await deleteS3File(`${file.id}${file.extension}`);
     return res.status(200).json({ message: "File Deleted Successfully" });
   } catch (err) {
     next(err);
