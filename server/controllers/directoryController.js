@@ -2,6 +2,7 @@ import { rm } from "fs/promises";
 import Directory from "../models/directoryModel.js";
 import File from "../models/fileModel.js";
 import { updateDirectoriesSize } from "./fileController.js";
+import { deleteS3Files } from "../config/s3.js";
 
 export const getDirectory = async (req, res) => {
   const user = req.user;
@@ -107,9 +108,16 @@ export const deleteDirectory = async (req, res, next) => {
 
     const { files, directories } = await getDirectoryContents(id);
 
-    for (const { _id, extension } of files) {
-      await rm(`./storage/${_id.toString()}${extension}`);
-    }
+    const keys = files.map(({ _id, extension }) => ({
+      Key: `${_id}${extension}`,
+    }));
+
+    console.log(keys);
+
+    const response = await deleteS3Files(keys);
+
+    console.log(response);
+
 
     await File.deleteMany({
       _id: { $in: files.map(({ _id }) => _id) },
