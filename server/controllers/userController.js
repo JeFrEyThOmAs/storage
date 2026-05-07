@@ -155,8 +155,10 @@ export const login = async (req, res, next) => {
     sessionId,
     {
       httpOnly: true,
-      signed: true,
-      maxAge: 60 * 60 * 1000 * 24 * 7,
+  signed: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 1000 * 60 * 60 * 24 * 7
     }
   );
   
